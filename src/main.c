@@ -11,7 +11,7 @@
 #include "http_parser.h"
 
 #define PORT_NO 3128
-#define BUFFER_SIZE 1<<16
+#define BUFFER_SIZE 1<<24
 
 #define offsetof(TYPE, MEMBER)  ((size_t)&((TYPE *)0)->MEMBER)
 
@@ -41,6 +41,7 @@ void server_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents);
 void client_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents);
 
 http_parser_settings settings;
+char buffer[BUFFER_SIZE];
 
 int send_str(int sockfd, const char* buf, int flags){
 	return send(sockfd, buf,strlen(buf),flags);
@@ -272,11 +273,8 @@ void accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents)
 
 
 void server_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents){
-	char buffer[BUFFER_SIZE];
 	ssize_t read;
-	
 	struct proxy_watcher *proxy = container_of(watcher,struct proxy_watcher,server_watcher);
-	
 
 	if(EV_ERROR & revents)
 	{
@@ -310,11 +308,8 @@ void server_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents){
 
 /* Read client message */
 void client_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents){
-	char buffer[BUFFER_SIZE];
 	ssize_t read;
-	
 	struct proxy_watcher *proxy = container_of(watcher,struct proxy_watcher,client_watcher);
-	
 
 	if(EV_ERROR & revents)
 	{
