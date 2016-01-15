@@ -96,7 +96,7 @@ int chunk_header_cb (http_parser *p)
 {
 	struct proxy_watcher *proxy = container_of(p,struct proxy_watcher,parser);
 	char hex[64];
-	sprintf(hex,"%x\r\n",p->content_length);
+	sprintf(hex,"%llx\r\n",p->content_length);
 	send_str(proxy->server_watcher.fd, hex,MSG_MORE);
 	return 0;
 }
