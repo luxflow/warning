@@ -17,8 +17,8 @@
 
 #define offsetof(TYPE, MEMBER)  ((size_t)&((TYPE *)0)->MEMBER)
 
-#define container_of(ptr, type, member) ({                      \
-const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+#define container_of(ptr, type, member) ({\
+const typeof( ((type *)0)->member ) *__mptr = (ptr);\
 (type *)( (char *)__mptr - offsetof(type,member) );})
 
 // defined in http_parser.c
@@ -42,10 +42,10 @@ char buffer[BUFFER_SIZE];
 FILE* logfp;
 
 void DEBUG_PRINT(const char* fmt, ...){
-    va_list args;
-    va_start(args, fmt);
+	va_list args;
+	va_start(args, fmt);
 	vfprintf(logfp, fmt, args);
-    va_end(args);
+	va_end(args);
 }
 
 int send_str(int sockfd, const char* buf, int flags){
@@ -114,16 +114,16 @@ int body_cb (http_parser *p, const char *buf, size_t len){
 
 void http_parser_setting(){
 /*
-  http_cb      on_message_begin;
-  http_data_cb on_url;
-  http_data_cb on_status;
-  http_data_cb on_header_field;
-  http_data_cb on_header_value;
-  http_cb      on_headers_complete;
-  http_data_cb on_body;
-  http_cb      on_message_complete;
-  http_cb      on_chunk_header;
-  http_cb      on_chunk_complete;
+	http_cb      on_message_begin;
+	http_data_cb on_url;
+	http_data_cb on_status;
+	http_data_cb on_header_field;
+	http_data_cb on_header_value;
+	http_cb      on_headers_complete;
+	http_data_cb on_body;
+	http_cb      on_message_complete;
+	http_cb      on_chunk_header;
+	http_cb      on_chunk_complete;
 */
  
 	settings.on_message_begin = message_begin_cb;
@@ -147,10 +147,10 @@ int main(int argc, char *argv[])
 	struct ev_io w_accept;
 	int bf=1;
 	char c;
-	// if no debug option set, it will log in /dev/null
+	// If no debug option set, It will log in /dev/null
 	char* logfile="/dev/null";
 	
-	// argument parsing for debug option
+	// Argument parsing for debug option
 	while ((c = getopt (argc, argv, "d:")) != -1){
 		switch(c){
 			case 'd':
@@ -166,8 +166,7 @@ int main(int argc, char *argv[])
 	logfp=fopen(logfile, "w");
 	
 	// Create proxy server socket
-	if( (sd = socket(PF_INET, SOCK_STREAM, 0)) < 0 )
-	{
+	if((sd = socket(PF_INET, SOCK_STREAM, 0)) < 0 ){
 		perror("socket error");
 		return -1;
 	}
@@ -183,14 +182,12 @@ int main(int argc, char *argv[])
 	addr.sin_port = htons(PORT_NO);
 	addr.sin_addr.s_addr = INADDR_ANY;
 	// Bind proxy server socket to address
-	if (bind(sd, (struct sockaddr*) &addr, sizeof(addr)) != 0)
-	{
+	if (bind(sd, (struct sockaddr*) &addr, sizeof(addr)) != 0){
 		perror("bind error");
 	}
 
 	// Start listing on the proxy server socket
-	if (listen(sd, 2) < 0)
-	{
+	if (listen(sd, 2) < 0){
 		perror("listen error");
 		return -1;
 	}
@@ -199,12 +196,11 @@ int main(int argc, char *argv[])
 	ev_io_init(&w_accept, accept_cb, sd, EV_READ);
 	ev_io_start(loop, &w_accept);
 
-	//initialize http parser callback
+	// Initialize http parser callback
 	http_parser_setting();
 	
 	// Start infinite loop
-	while (1)
-	{
+	while (1){
 		printf("listening ....\n");
 		ev_loop(loop, 0);
 	}
@@ -237,8 +233,7 @@ void accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents)
 	
 	DEBUG_PRINT("new connection!\n");
 	
-	if(EV_ERROR & revents)
-	{
+	if(EV_ERROR & revents){
 		perror("got invalid event");
 		return;
 	}
@@ -246,8 +241,7 @@ void accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents)
 	// Accept client request
 	client_sd = accept(watcher->fd, (struct sockaddr *)&client_addr, &client_len);
 
-	if (client_sd < 0)
-	{
+	if (client_sd < 0){
 		perror("accept error");
 		return;
 	}
@@ -274,37 +268,36 @@ void accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents)
 	server_sd=socket( PF_INET, SOCK_STREAM, 0);
 	// Disable nagle, `send` function immediately send data if MSG_MORE isn't set
 	setsockopt(server_sd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(int));
-	
+
 	if(server_sd <0){
 		perror("socket error");
 		return;
 	}
-	
+
 	// Set timeout for socket
-    timeout.tv_sec = 10;
-    timeout.tv_usec = 0;
-    if (setsockopt (server_sd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0){
-        perror("setsockopt failed\n");
+	timeout.tv_sec = 10;
+	timeout.tv_usec = 0;
+	if (setsockopt (server_sd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0){
+		perror("setsockopt failed\n");
 	}
-	
+
 	// Connect to original destination
-	if(connect(server_sd, (struct sockaddr*)&server_addr, sizeof(server_addr))<0)
-	{
-	   perror("server socket connect error");
-	   return;
+	if(connect(server_sd, (struct sockaddr*)&server_addr, sizeof(server_addr))<0){
+		perror("server socket connect error");
+		return;
 	}
-	
+
 	// A proxy connection is allocated now.
 	proxy = (struct proxy_watcher*) malloc (sizeof(struct proxy_watcher));
 	proxy->upgrade = 0;
-	
+
 	// Http parser init for request
 	http_parser_init(&proxy->parser, HTTP_REQUEST);
-	
+
 	// Initialize and start watcher to read original server requests
 	ev_io_init(&proxy->server_watcher, server_read_cb, server_sd, EV_READ);
 	ev_io_start(loop, &proxy->server_watcher);
-	
+
 	// Initialize and start watcher to read client requests
 	ev_io_init(&proxy->client_watcher, client_read_cb, client_sd, EV_READ);
 	ev_io_start(loop, &proxy->client_watcher);
@@ -315,8 +308,7 @@ void server_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents){
 	ssize_t read;
 	struct proxy_watcher *proxy = container_of(watcher,struct proxy_watcher,server_watcher);
 
-	if(EV_ERROR & revents)
-	{
+	if(EV_ERROR & revents){
 		perror("got invalid event");
 		return;
 	}
@@ -324,21 +316,18 @@ void server_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents){
 	// Receive message from original server socket
 	read = recv(watcher->fd, buffer, BUFFER_SIZE, 0);
 
-	if(read < 0)
-	{
+	if(read < 0){
 		close_proxy(loop,proxy);
 		perror("read error");
 		return;
 	}
 
-	if(read == 0)
-	{
+	if(read == 0){
 		// Stop and free watchet if client socket is closing
 		close_proxy(loop,proxy);
 		return;
 	}
-	else
-	{
+	else{
 		//Send back to client
 		send(proxy->client_watcher.fd, buffer,read,0);
 		//printf("message:%s\n",buffer);
@@ -350,8 +339,7 @@ void client_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents){
 	ssize_t read;
 	struct proxy_watcher *proxy = container_of(watcher,struct proxy_watcher,client_watcher);
 
-	if(EV_ERROR & revents)
-	{
+	if(EV_ERROR & revents){
 		perror("got invalid event");
 		return;
 	}
@@ -359,28 +347,24 @@ void client_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents){
 	// Receive message from client socket
 	read = recv(watcher->fd, buffer, BUFFER_SIZE, 0);
 
-	if(read < 0)
-	{
+	if(read < 0){
 		close_proxy(loop,proxy);
 		perror("read error");
 		return;
 	}
 
-	if(read == 0)
-	{
+	if(read == 0){
 		// Stop and free watchet if client socket is closing
 		close_proxy(loop,proxy);
 		return;
 	}
-	else
-	{
-		
+	else{
 		if(proxy->upgrade==0){
 			// Parse http data
 			int nparsed=http_parser_execute(&proxy->parser,&settings, buffer,read);
 			DEBUG_PRINT("readed %d parsed %d\n", read,nparsed);
 			if(proxy->parser.upgrade){
-				// when http upgrades, set upgrade flag on
+				// When http upgrades, set upgrade flag on
 				proxy->upgrade=1;
 			}else if(nparsed != read){
 				DEBUG_PRINT("parsing error!\nclose connection!\n");
